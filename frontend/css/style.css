@@ -1,0 +1,225 @@
+/* ============================================================
+   SmartPark India — Design System
+   Palette:  asphalt #1C1E22 · off-white #F5F3EE · signal-yellow #F2C230
+             signal-green #3FA34D · signal-red #D64545 · steel #8A8F98
+   Type:     display  "Oswald"        (condensed, highway-gantry)
+             body     "Inter"
+             mono     "JetBrains Mono" (plates, booking refs, data)
+   Signature: painted parking-bay grid — used as hero AND as the real
+              live-availability indicator, not decoration.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --asphalt: #1C1E22;
+  --asphalt-2: #26292F;
+  --off-white: #F5F3EE;
+  --yellow: #F2C230;
+  --green: #3FA34D;
+  --red: #D64545;
+  --steel: #8A8F98;
+  --steel-light: #C7CBD1;
+
+  --font-display: 'Oswald', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 3px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--off-white);
+  color: var(--asphalt);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ---------- Layout ---------- */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+.navbar {
+  background: var(--asphalt);
+  color: var(--off-white);
+  border-bottom: 4px solid var(--yellow);
+}
+.navbar .container {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+}
+.navbar .brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  display: flex; align-items: center; gap: 8px;
+}
+.navbar .brand .plate {
+  background: var(--yellow); color: var(--asphalt);
+  font-family: var(--font-mono); font-weight: 700; font-size: 12px;
+  padding: 2px 6px; border-radius: 2px; border: 1.5px solid var(--asphalt);
+}
+.navbar nav { display: flex; gap: 24px; font-size: 14px; font-weight: 500; }
+.navbar nav a { opacity: 0.85; transition: opacity 0.15s; }
+.navbar nav a:hover { opacity: 1; }
+
+/* ---------- Hero: painted bay grid ---------- */
+.hero {
+  background: var(--asphalt);
+  color: var(--off-white);
+  padding: 72px 0 56px;
+  position: relative;
+  overflow: hidden;
+}
+.hero .container { position: relative; z-index: 2; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; }
+.hero h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.05; }
+.hero h1 .accent { color: var(--yellow); }
+.hero p.lead { font-size: 17px; color: var(--steel-light); max-width: 46ch; margin-top: 16px; line-height: 1.6; }
+
+.bay-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.bay {
+  aspect-ratio: 1 / 1.4;
+  border: 2px dashed rgba(245,243,238,0.35);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: rgba(245,243,238,0.5);
+  transition: background 0.6s ease, color 0.6s ease, border-color 0.6s ease;
+}
+.bay.occupied { background: rgba(214,69,69,0.18); border-color: var(--red); color: var(--red); }
+.bay.free { background: rgba(63,163,77,0.18); border-color: var(--green); color: var(--green); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 14px;
+  padding: 12px 22px; border-radius: var(--radius); border: 2px solid transparent;
+  cursor: pointer; transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--yellow); color: var(--asphalt); }
+.btn-primary:hover { box-shadow: 0 0 0 3px rgba(242,194,48,0.35); }
+.btn-outline { background: transparent; border-color: var(--off-white); color: var(--off-white); }
+.btn-outline:hover { background: rgba(245,243,238,0.08); }
+.btn-dark { background: var(--asphalt); color: var(--off-white); }
+.btn-dark:hover { background: #000; }
+.btn-danger { background: var(--red); color: white; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-block { width: 100%; }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+
+/* ---------- Cards ---------- */
+.section { padding: 56px 0; }
+.section-title { font-size: 26px; margin-bottom: 28px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; color: var(--yellow); background: var(--asphalt);
+  display: inline-block; padding: 4px 10px; border-radius: 2px; margin-bottom: 12px; }
+
+.card {
+  background: white; border: 1px solid #E4E1D8; border-radius: var(--radius);
+  padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card + .card { margin-top: 14px; }
+
+.parking-card { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; }
+.parking-card .badge-score {
+  font-family: var(--font-mono); font-weight: 700; font-size: 20px;
+  background: var(--asphalt); color: var(--yellow); border-radius: 50%;
+  width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; line-height: 1;
+}
+.parking-card .badge-score span { font-size: 8px; color: var(--steel-light); text-transform: uppercase; margin-top: 2px; }
+.parking-card h3 { font-size: 18px; text-transform: none; letter-spacing: 0; }
+.parking-card .meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--steel); }
+.parking-card .meta strong { color: var(--asphalt); }
+.tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+.tag-green { background: rgba(63,163,77,0.15); color: var(--green); }
+.tag-yellow { background: rgba(242,194,48,0.2); color: #8a6a00; }
+.tag-red { background: rgba(214,69,69,0.15); color: var(--red); }
+
+/* ---------- Forms ---------- */
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--asphalt); }
+input, select, textarea {
+  width: 100%; padding: 11px 12px; border: 1.5px solid #D8D4C8; border-radius: var(--radius);
+  font-family: var(--font-body); font-size: 14px; background: white; color: var(--asphalt);
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(242,194,48,0.25); }
+
+.auth-shell { max-width: 420px; margin: 64px auto; }
+.auth-shell .card { padding: 32px; }
+
+/* ---------- Ticket ---------- */
+.ticket {
+  background: var(--asphalt); color: var(--off-white); border-radius: 6px;
+  padding: 28px; position: relative; border: 2px dashed var(--yellow);
+  max-width: 420px; margin: 0 auto;
+}
+.ticket .ticket-header { text-align: center; border-bottom: 1px dashed rgba(245,243,238,0.3); padding-bottom: 16px; margin-bottom: 16px; }
+.ticket .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+.ticket .row .label { color: var(--steel-light); }
+.ticket .plate-number {
+  font-family: var(--font-mono); font-weight: 700; background: var(--yellow); color: var(--asphalt);
+  padding: 4px 10px; border-radius: 2px; letter-spacing: 0.05em;
+}
+.ticket .qr-box { background: white; padding: 10px; border-radius: 4px; margin: 16px auto; width: fit-content; }
+.ticket .qr-box img { display: block; width: 160px; height: 160px; }
+.status-pill { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.status-confirmed { background: var(--green); color: white; }
+.status-cancelled { background: var(--red); color: white; }
+
+/* ---------- Stat grid (admin) ---------- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.stat-card { background: var(--asphalt); color: var(--off-white); padding: 20px; border-radius: var(--radius); border-left: 4px solid var(--yellow); }
+.stat-card .value { font-family: var(--font-display); font-size: 30px; font-weight: 700; }
+.stat-card .label { font-size: 12px; color: var(--steel-light); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+
+/* ---------- Utility ---------- */
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.gap-8 { gap: 8px; } .gap-12 { gap: 12px; } .gap-16 { gap: 16px; }
+.mt-8{margin-top:8px;} .mt-16{margin-top:16px;} .mt-24{margin-top:24px;} .mt-32{margin-top:32px;}
+.muted { color: var(--steel); }
+.center { text-align: center; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--steel); }
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--asphalt); color: var(--off-white);
+  padding: 14px 20px; border-radius: var(--radius); border-left: 4px solid var(--yellow);
+  box-shadow: var(--shadow); font-size: 14px; z-index: 999; max-width: 320px;
+  transform: translateY(20px); opacity: 0; transition: all 0.25s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-left-color: var(--red); }
+
+footer { background: var(--asphalt); color: var(--steel-light); padding: 28px 0; margin-top: 60px; font-size: 13px; }
+
+@media (max-width: 760px) {
+  .hero .container { grid-template-columns: 1fr; }
+  .parking-card { grid-template-columns: 1fr; text-align: left; }
+  .parking-card .badge-score { width: 44px; height: 44px; font-size: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bay { transition: none; }
+  html { scroll-behavior: auto; }
+}

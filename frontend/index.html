@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPark India — Find, Predict & Book Parking</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<section class="hero">
+  <div class="container">
+    <div>
+      <div class="eyebrow">AI-POWERED · PAN-INDIA</div>
+      <h1>Never circle the block <span class="accent">looking for parking</span> again.</h1>
+      <p class="lead">SmartPark India predicts slot availability before you arrive, ranks nearby parking by an AI score, and lets you pre-book a guaranteed spot with a digital ticket.</p>
+
+      <div class="card mt-24" style="max-width:480px;">
+        <form id="searchForm">
+          <div class="form-group">
+            <label for="destination">Where are you headed?</label>
+            <input type="text" id="destination" placeholder="e.g. Hazratganj, Lucknow" required>
+          </div>
+          <div class="flex gap-12">
+            <button type="submit" class="btn btn-primary btn-block">🔍 Find Parking Nearby</button>
+            <button type="button" id="useLocationBtn" class="btn btn-dark" title="Use current location">📍</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div>
+      <div id="heroBayGrid" class="bay-grid"></div>
+      <p class="center mono" style="font-size:11px;color:var(--steel-light);margin-top:10px;">LIVE BAY STATUS — PHOENIX MALL PARKING, LUCKNOW</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="eyebrow" style="background:transparent;color:var(--steel);padding:0;">HOW IT WORKS</div>
+    <h2 class="section-title">Find → Predict → Book → Park</h2>
+    <div class="stat-grid">
+      <div class="card">
+        <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">1. Discover</h3>
+        <p class="muted mt-8" style="font-size:14px;">See every registered parking facility near your destination, filtered by price, EV charging, or covered parking.</p>
+      </div>
+      <div class="card">
+        <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">2. AI Recommendation</h3>
+        <p class="muted mt-8" style="font-size:14px;">Our model predicts availability at your arrival time and scores each option on distance, price, and predicted space.</p>
+      </div>
+      <div class="card">
+        <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">3. Pre-Book</h3>
+        <p class="muted mt-8" style="font-size:14px;">Reserve your slot in advance — no more arriving to a full lot. Pay by UPI, card, or cash on arrival.</p>
+      </div>
+      <div class="card">
+        <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">4. Park with a QR Ticket</h3>
+        <p class="muted mt-8" style="font-size:14px;">Scan in at the entrance with your digital ticket. SMS reminders keep you on schedule.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">SmartPark India — a BCA (Data Science &amp; AI) major project. Not a commercial product.</div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+renderNavbar();
+
+// Demo hero grid — real-time snapshot of facility id 1 (Phoenix Mall Parking) if available.
+(async function initHero() {
+  const grid = document.getElementById("heroBayGrid");
+  try {
+    const facility = await api("/parking/1", { auth: false });
+    renderBayGrid(grid, facility.total_slots, facility.total_slots - facility.available_slots);
+  } catch (e) {
+    // Fallback static pattern if no data yet.
+    let html = "";
+    for (let i = 0; i < 24; i++) html += `<div class="bay ${i % 3 === 0 ? "occupied" : "free"}">${i % 3 === 0 ? "X" : ""}</div>`;
+    grid.innerHTML = html;
+  }
+})();
+
+document.getElementById("searchForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const dest = document.getElementById("destination").value.trim();
+  if (!dest) return;
+  window.location.href = "map.html?q=" + encodeURIComponent(dest);
+});
+
+document.getElementById("useLocationBtn").addEventListener("click", () => {
+  if (!navigator.geolocation) { toast("Location not supported in this browser", true); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { window.location.href = `map.html?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`; },
+    () => toast("Could not get your location", true)
+  );
+});
+</script>
+</body>
+</html>

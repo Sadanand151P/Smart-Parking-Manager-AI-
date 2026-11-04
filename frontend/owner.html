@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Dashboard — SmartPark India</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<section class="section" style="padding-top:32px;">
+  <div class="container">
+    <div class="eyebrow" style="background:transparent;color:var(--steel);padding:0;">PARKING OWNER</div>
+    <h2 class="section-title">Your Parking Facilities</h2>
+
+    <button id="showFormBtn" class="btn btn-primary">+ Register New Facility</button>
+
+    <div id="registerCard" class="card mt-16" style="display:none;">
+      <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">New Facility Details</h3>
+      <form id="facilityForm" class="mt-16">
+        <div class="form-group"><label>Facility name</label><input type="text" id="f_name" required></div>
+        <div class="flex gap-12">
+          <div class="form-group" style="flex:2;"><label>Address</label><input type="text" id="f_address" required></div>
+          <div class="form-group" style="flex:1;"><label>Pincode</label><input type="text" id="f_pincode" maxlength="6"></div>
+        </div>
+        <div class="flex gap-12">
+          <div class="form-group" style="flex:1;"><label>City</label><input type="text" id="f_city" required></div>
+          <div class="form-group" style="flex:1;"><label>State</label><input type="text" id="f_state" required></div>
+        </div>
+        <div class="flex gap-12">
+          <div class="form-group" style="flex:1;"><label>Latitude</label><input type="number" step="any" id="f_lat" required></div>
+          <div class="form-group" style="flex:1;"><label>Longitude</label><input type="number" step="any" id="f_lng" required></div>
+          <button type="button" id="useMyLocation" class="btn btn-sm btn-dark" style="align-self:flex-end;height:44px;">📍 Use my location</button>
+        </div>
+        <div class="flex gap-12">
+          <div class="form-group" style="flex:1;"><label>2-Wheeler capacity</label><input type="number" id="f_cap2w" value="50" required></div>
+          <div class="form-group" style="flex:1;"><label>2-Wheeler ₹/hr</label><input type="number" id="f_price2w" value="15" required></div>
+        </div>
+        <div class="flex gap-12">
+          <div class="form-group" style="flex:1;"><label>4-Wheeler capacity</label><input type="number" id="f_cap4w" value="100" required></div>
+          <div class="form-group" style="flex:1;"><label>4-Wheeler ₹/hr</label><input type="number" id="f_price4w" value="40" required></div>
+        </div>
+        <div class="filters" style="display:flex;gap:14px;margin:12px 0 18px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="f_ev"> EV Charging</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="f_cctv" checked> CCTV</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="f_covered"> Covered</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="f_security"> Security Guard</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="f_247"> Open 24×7</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit for Approval</button>
+      </form>
+    </div>
+
+    <div id="facilitiesList" class="mt-32"></div>
+  </div>
+</section>
+
+<footer><div class="container">SmartPark India — a BCA (Data Science &amp; AI) major project.</div></footer>
+
+<script src="js/api.js"></script>
+<script>
+requireAuth(["owner", "admin"]);
+renderNavbar();
+
+document.getElementById("showFormBtn").addEventListener("click", () => {
+  const card = document.getElementById("registerCard");
+  card.style.display = card.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("useMyLocation").addEventListener("click", () => {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { document.getElementById("f_lat").value = pos.coords.latitude; document.getElementById("f_lng").value = pos.coords.longitude; },
+    () => toast("Could not get location", true)
+  );
+});
+
+document.getElementById("facilityForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    name: document.getElementById("f_name").value.trim(),
+    address: document.getElementById("f_address").value.trim(),
+    city: document.getElementById("f_city").value.trim(),
+    state: document.getElementById("f_state").value.trim(),
+    pincode: document.getElementById("f_pincode").value.trim(),
+    latitude: parseFloat(document.getElementById("f_lat").value),
+    longitude: parseFloat(document.getElementById("f_lng").value),
+    capacity_2w: parseInt(document.getElementById("f_cap2w").value),
+    capacity_4w: parseInt(document.getElementById("f_cap4w").value),
+    price_2w: parseFloat(document.getElementById("f_price2w").value),
+    price_4w: parseFloat(document.getElementById("f_price4w").value),
+    ev_charging: document.getElementById("f_ev").checked,
+    cctv: document.getElementById("f_cctv").checked,
+    covered: document.getElementById("f_covered").checked,
+    security_guard: document.getElementById("f_security").checked,
+    is_24x7: document.getElementById("f_247").checked,
+  };
+  try {
+    await api("/parking/register", { method: "POST", body });
+    toast("Facility submitted for admin approval");
+    document.getElementById("facilityForm").reset();
+    document.getElementById("registerCard").style.display = "none";
+    loadFacilities();
+  } catch (err) { toast(err.message, true); }
+});
+
+function statusTag(status) {
+  const map = { approved: "tag-green", pending: "tag-yellow", rejected: "tag-red" };
+  return `<span class="tag ${map[status] || "tag-yellow"}">${status}</span>`;
+}
+
+async function loadFacilities() {
+  const list = document.getElementById("facilitiesList");
+  try {
+    const facilities = await api("/parking/owner/my-facilities");
+    if (facilities.length === 0) {
+      list.innerHTML = `<div class="empty-state"><h3 style="text-transform:none;">No facilities yet</h3><p>Register your first parking facility above.</p></div>`;
+      return;
+    }
+    list.innerHTML = facilities.map(f => `
+      <div class="card">
+        <div class="flex-between">
+          <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">${f.name} ${statusTag(f.status)}</h3>
+          <span class="muted" style="font-size:13px;">${f.city}, ${f.state}</span>
+        </div>
+        <p class="muted" style="font-size:13px;margin-top:4px;">${f.address}</p>
+        <div class="meta" style="display:flex;gap:16px;font-size:13px;margin-top:10px;">
+          <span>🅿️ ${f.available_slots}/${f.total_slots} free</span>
+          <span>💰 ₹${f.price_2w}/₹${f.price_4w} (2W/4W)</span>
+          <span>⭐ ${f.rating || "—"}</span>
+        </div>
+        <div class="flex gap-8 mt-16" style="align-items:center;">
+          <label style="font-size:13px;font-weight:600;margin:0;">Update occupied count:</label>
+          <input type="number" id="occ-${f.id}" style="width:90px;" min="0" max="${f.total_slots}">
+          <button class="btn btn-sm btn-dark" onclick="updateOccupancy(${f.id}, ${f.total_slots})">Update</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (e) { list.innerHTML = `<p class="muted">Could not load facilities.</p>`; }
+}
+
+async function updateOccupancy(facilityId, total) {
+  const occupied = parseInt(document.getElementById(`occ-${facilityId}`).value);
+  if (isNaN(occupied) || occupied < 0 || occupied > total) { toast("Enter a valid occupied count", true); return; }
+  try {
+    await api(`/parking/owner/${facilityId}/occupancy`, { method: "POST", body: { occupied } });
+    toast("Occupancy updated");
+    loadFacilities();
+  } catch (e) { toast(e.message, true); }
+}
+
+loadFacilities();
+</script>
+</body>
+</html>

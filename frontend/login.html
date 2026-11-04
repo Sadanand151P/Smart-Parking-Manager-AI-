@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — SmartPark India</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<div class="container auth-shell">
+  <div class="card">
+    <div class="eyebrow">WELCOME BACK</div>
+    <h2>Log in to SmartPark</h2>
+    <form id="loginForm" class="mt-24">
+      <div class="form-group">
+        <label for="identifier">Email or mobile number</label>
+        <input type="text" id="identifier" required placeholder="you@example.com or 9XXXXXXXXX">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Log In</button>
+    </form>
+    <p class="muted mt-16" style="font-size:13px;">
+      No account? <a href="register.html" style="color:var(--asphalt);font-weight:600;">Register here</a>
+    </p>
+    <p class="muted mt-8" style="font-size:12px;">
+      Demo logins — Customer: aditi@example.com / Customer@123 · Owner: ramesh.owner@smartpark.in / Owner@123 · Admin: admin@smartpark.in / Admin@123
+    </p>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+renderNavbar();
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const identifier = document.getElementById("identifier").value.trim();
+  const password = document.getElementById("password").value;
+  const btn = e.target.querySelector("button");
+  btn.disabled = true; btn.textContent = "Logging in…";
+  try {
+    const data = await api("/auth/login", { method: "POST", auth: false, body: { email_or_mobile: identifier, password } });
+    setToken(data.token);
+    setUser(data.user);
+    toast(`Welcome back, ${data.user.name.split(" ")[0]}!`);
+    setTimeout(() => {
+      if (data.user.role === "owner") window.location.href = "owner.html";
+      else if (data.user.role === "admin") window.location.href = "admin.html";
+      else window.location.href = "index.html";
+    }, 500);
+  } catch (err) {
+    toast(err.message, true);
+    btn.disabled = false; btn.textContent = "Log In";
+  }
+});
+</script>
+</body>
+</html>

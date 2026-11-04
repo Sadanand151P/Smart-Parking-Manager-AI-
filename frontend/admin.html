@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — SmartPark India</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<section class="section" style="padding-top:32px;">
+  <div class="container">
+    <div class="eyebrow" style="background:transparent;color:var(--steel);padding:0;">ADMIN CONSOLE</div>
+    <h2 class="section-title">SmartPark Admin</h2>
+
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="flex gap-16 mt-32" style="align-items:flex-start; flex-wrap:wrap;">
+      <div style="flex:1; min-width:320px;">
+        <h3 style="text-transform:none; letter-spacing:0; font-size:18px;">Pending Facility Approvals</h3>
+        <div id="pendingList" class="mt-16"></div>
+      </div>
+
+      <div style="flex:1; min-width:320px;">
+        <h3 style="text-transform:none; letter-spacing:0; font-size:18px;">AI Demand Prediction</h3>
+        <div id="aiPrediction" class="mt-16"></div>
+      </div>
+    </div>
+
+    <div class="mt-32">
+      <h3 style="text-transform:none; letter-spacing:0; font-size:18px;">Data Science Analytics</h3>
+      <div id="analyticsSummary" class="mt-16"></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="container">SmartPark India — a BCA (Data Science &amp; AI) major project.</div></footer>
+
+<script src="js/api.js"></script>
+<script>
+requireAuth(["admin"]);
+renderNavbar();
+
+async function loadDashboard() {
+  try {
+    const d = await api("/admin/dashboard");
+    document.getElementById("statGrid").innerHTML = `
+      <div class="stat-card"><div class="value">${d.total_parking_facilities}</div><div class="label">Facilities (Approved)</div></div>
+      <div class="stat-card"><div class="value">${d.total_users}</div><div class="label">Registered Customers</div></div>
+      <div class="stat-card"><div class="value">${d.todays_bookings}</div><div class="label">Today's Bookings</div></div>
+      <div class="stat-card"><div class="value">${d.active_vehicles}</div><div class="label">Active Vehicles</div></div>
+      <div class="stat-card"><div class="value">₹${Number(d.revenue_today).toFixed(0)}</div><div class="label">Revenue Today</div></div>
+      <div class="stat-card"><div class="value">${d.peak_booking_time || "—"}</div><div class="label">Peak Booking Time</div></div>
+    `;
+  } catch (e) { toast(e.message, true); }
+}
+
+function statusActions(id) {
+  return `
+    <button class="btn btn-sm btn-primary" onclick="approveFacility(${id})">Approve</button>
+    <button class="btn btn-sm btn-danger" onclick="rejectFacility(${id})">Reject</button>
+  `;
+}
+
+async function loadPending() {
+  const list = document.getElementById("pendingList");
+  try {
+    const rows = await api("/admin/facilities/pending");
+    if (!rows.length) {
+      list.innerHTML = `<div class="empty-state">No facilities awaiting approval.</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(f => `
+      <div class="card">
+        <div class="flex-between">
+          <h3 style="text-transform:none; letter-spacing:0; font-size:15px;">${f.name}</h3>
+          <span class="tag tag-yellow">PENDING</span>
+        </div>
+        <p class="muted" style="font-size:13px; margin-top:4px;">${f.address}, ${f.city}, ${f.state}</p>
+        <div class="meta" style="font-size:13px; margin-top:8px;">
+          <span>2W: ${f.capacity_2w} @ ₹${f.price_2w}/hr</span>
+          <span>4W: ${f.capacity_4w} @ ₹${f.price_4w}/hr</span>
+        </div>
+        <div class="mt-16">${statusActions(f.id)}</div>
+      </div>
+    `).join("");
+  } catch (e) { list.innerHTML = `<p class="muted">Could not load pending facilities.</p>`; }
+}
+
+async function approveFacility(id) {
+  try { await api(`/admin/facilities/${id}/approve`, { method: "POST" }); toast("Facility approved"); loadPending(); loadDashboard(); }
+  catch (e) { toast(e.message, true); }
+}
+async function rejectFacility(id) {
+  try { await api(`/admin/facilities/${id}/reject`, { method: "POST" }); toast("Facility rejected"); loadPending(); }
+  catch (e) { toast(e.message, true); }
+}
+
+function demandTag(level) {
+  const map = { "VERY HIGH": "tag-red", "HIGH": "tag-red", "MODERATE": "tag-yellow", "LOW": "tag-green", "UNKNOWN": "tag-yellow" };
+  return `<span class="tag ${map[level] || 'tag-yellow'}">${level}</span>`;
+}
+
+async function loadAiPrediction() {
+  const el = document.getElementById("aiPrediction");
+  try {
+    const d = await api("/admin/analytics/ai-prediction");
+    el.innerHTML = `
+      <div class="card">
+        <div class="flex-between">
+          <span class="muted" style="font-size:13px;">Overall demand right now</span>
+          ${demandTag(d.overall_demand_level)}
+        </div>
+        <div class="mt-16">
+          ${d.facilities.map(f => `
+            <div class="flex-between mt-8" style="font-size:14px;">
+              <span>${f.name}</span>
+              <span>${f.predicted_demand} vehicles ${demandTag(f.demand_level)}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state">${e.data && e.data.error ? e.data.error : "Model not available yet."}</div>`;
+  }
+}
+
+async function loadAnalytics() {
+  const el = document.getElementById("analyticsSummary");
+  try {
+    const d = await api("/admin/analytics/summary");
+    if (d.message) { el.innerHTML = `<div class="empty-state">${d.message}</div>`; return; }
+    el.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-card"><div class="value">₹${d.total_revenue}</div><div class="label">Total Revenue</div></div>
+        <div class="stat-card"><div class="value">${d.cancellation_rate_pct}%</div><div class="label">Cancellation Rate</div></div>
+        <div class="stat-card"><div class="value">${d.avg_parking_duration_hours}h</div><div class="label">Avg. Duration</div></div>
+        <div class="stat-card"><div class="value" style="font-size:16px;">${d.most_popular_parking}</div><div class="label">Most Popular Facility</div></div>
+        <div class="stat-card"><div class="value" style="font-size:16px;">${d.most_popular_city}</div><div class="label">Most Popular City</div></div>
+      </div>
+      <div class="card mt-16">
+        <h4 style="text-transform:none; letter-spacing:0; font-size:14px; margin-bottom:8px;">Vehicle Type Distribution</h4>
+        ${Object.entries(d.vehicle_type_distribution).map(([k, v]) => `
+          <div class="flex-between" style="font-size:13px; margin-bottom:4px;"><span>${k}</span><span>${v} bookings</span></div>
+        `).join("")}
+      </div>`;
+  } catch (e) { el.innerHTML = `<div class="empty-state">Could not load analytics.</div>`; }
+}
+
+loadDashboard();
+loadPending();
+loadAiPrediction();
+loadAnalytics();
+</script>
+</body>
+</html>

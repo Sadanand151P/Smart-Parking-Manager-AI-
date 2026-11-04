@@ -1,0 +1,26 @@
+# SmartPark India — requirements
+#
+# This is the stack actually used and tested in this build (Flask/SQLite —
+# substituted for the originally-planned FastAPI/PostgreSQL because the dev
+# sandbox that generated this project has no internet access to pip install
+# them). If you have a normal internet-connected environment, either stack
+# works; see README.md "Swapping back to FastAPI + PostgreSQL" for notes.
+
+Flask==3.1.3
+PyJWT==2.7.0
+pandas==3.0.2
+numpy==2.4.4
+scikit-learn==1.8.0
+joblib
+matplotlib==3.10.8
+seaborn==0.13.2
+pillow==12.1.1
+
+# --- Production upgrade path (not required to run the college build) ---
+# fastapi
+# uvicorn
+# sqlalchemy
+# psycopg2-binary
+# xgboost
+# qrcode
+# requests          # for real MSG91 / payment gateway HTTP calls

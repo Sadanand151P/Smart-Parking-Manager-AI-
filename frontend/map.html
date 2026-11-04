@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find Parking — SmartPark India</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .filters label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: white; border: 1.5px solid #D8D4C8; padding: 8px 12px; border-radius: 20px; cursor: pointer; }
+  .filters input[type=checkbox] { width: auto; }
+  .modal-overlay { display:none; position: fixed; inset: 0; background: rgba(28,30,34,0.6); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 6px; max-width: 480px; width: 100%; padding: 28px; max-height: 90vh; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<section class="section" style="padding-top:32px;">
+  <div class="container">
+    <div class="eyebrow" style="background:transparent;color:var(--steel);padding:0;">SEARCH RESULTS</div>
+    <h2 class="section-title" id="pageTitle">Parking near you</h2>
+
+    <div class="card mt-16" style="max-width:640px;">
+      <div class="flex gap-12" style="flex-wrap:wrap;">
+        <div class="form-group" style="flex:2;min-width:180px;margin-bottom:0;">
+          <label for="arrivalDate">Arrival date</label>
+          <input type="date" id="arrivalDate">
+        </div>
+        <div class="form-group" style="flex:1;min-width:120px;margin-bottom:0;">
+          <label for="arrivalTime">Time</label>
+          <input type="time" id="arrivalTime" value="19:00">
+        </div>
+        <div class="form-group" style="flex:1;min-width:130px;margin-bottom:0;">
+          <label for="vehicleTypeFilter">Vehicle</label>
+          <select id="vehicleTypeFilter">
+            <option value="4-wheeler">4-Wheeler</option>
+            <option value="2-wheeler">2-Wheeler</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters mt-16">
+        <label><input type="checkbox" id="evOnly"> ⚡ EV Charging</label>
+        <label><input type="checkbox" id="coveredOnly"> 🏠 Covered</label>
+      </div>
+      <button id="refreshBtn" class="btn btn-dark btn-block">🤖 Get AI Recommendations</button>
+    </div>
+
+    <div id="results" class="mt-32"></div>
+  </div>
+</section>
+
+<footer><div class="container">SmartPark India — a BCA (Data Science &amp; AI) major project.</div></footer>
+
+<!-- Booking modal -->
+<div class="modal-overlay" id="bookingModal">
+  <div class="modal">
+    <div class="eyebrow">RESERVE THIS SLOT</div>
+    <h3 id="modalFacilityName" style="text-transform:none;letter-spacing:0;font-size:20px;"></h3>
+    <form id="bookingForm" class="mt-16">
+      <div class="form-group">
+        <label for="vehicleSelect">Vehicle</label>
+        <select id="vehicleSelect" required></select>
+      </div>
+      <div class="flex gap-12">
+        <div class="form-group" style="flex:1;">
+          <label for="bookDate">Date</label>
+          <input type="date" id="bookDate" required>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label for="bookStart">Entry</label>
+          <input type="time" id="bookStart" required>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label for="bookEnd">Exit</label>
+          <input type="time" id="bookEnd" required>
+        </div>
+      </div>
+      <div class="flex gap-12 mt-16">
+        <button type="button" id="cancelModalBtn" class="btn btn-outline" style="border-color:#D8D4C8;color:var(--asphalt);flex:1;">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:2;">Confirm Booking</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+renderNavbar();
+
+const params = new URLSearchParams(window.location.search);
+let userLat = params.get("lat") ? parseFloat(params.get("lat")) : 26.85;   // default: Lucknow
+let userLng = params.get("lng") ? parseFloat(params.get("lng")) : 80.94;
+if (params.get("q")) document.getElementById("pageTitle").textContent = `Parking near "${params.get("q")}"`;
+
+const today = new Date();
+document.getElementById("arrivalDate").value = today.toISOString().slice(0, 10);
+document.getElementById("bookDate").value = today.toISOString().slice(0, 10);
+
+let selectedFacility = null;
+
+async function loadResults() {
+  const resultsEl = document.getElementById("results");
+  resultsEl.innerHTML = `<p class="muted">Loading recommendations…</p>`;
+
+  const date = document.getElementById("arrivalDate").value;
+  const time = document.getElementById("arrivalTime").value;
+  const vehicleType = document.getElementById("vehicleTypeFilter").value;
+  const evOnly = document.getElementById("evOnly").checked;
+  const coveredOnly = document.getElementById("coveredOnly").checked;
+  const arrival = `${date}T${time}:00`;
+
+  try {
+    const data = await api(
+      `/parking/recommend?lat=${userLat}&lng=${userLng}&radius_km=15&arrival=${encodeURIComponent(arrival)}&vehicle_type=${vehicleType}`,
+      { auth: false }
+    );
+    let results = data.results || [];
+
+    if (evOnly || coveredOnly) {
+      const nearby = await api(`/parking/nearby?lat=${userLat}&lng=${userLng}&radius_km=15&ev_only=${evOnly?1:0}&covered_only=${coveredOnly?1:0}`, { auth: false });
+      const allowedIds = new Set(nearby.map(f => f.id));
+      results = results.filter(r => allowedIds.has(r.id));
+    }
+
+    if (results.length === 0) {
+      resultsEl.innerHTML = `<div class="empty-state"><h3 style="text-transform:none;">No parking found nearby</h3><p>Try widening your filters or searching a different area.</p></div>`;
+      return;
+    }
+
+    resultsEl.innerHTML = results.map((r, i) => `
+      <div class="card parking-card">
+        <div class="badge-score">${Math.round(r.ai_score)}<span>AI Score</span></div>
+        <div>
+          <h3>${r.name}</h3>
+          <p class="muted" style="font-size:13px;margin-top:2px;">${r.address}</p>
+          <div class="meta">
+            <span>📍 <strong>${r.distance_km} km</strong> · ${r.eta_minutes} min</span>
+            <span>💰 <strong>₹${r.price_per_hour}</strong>/hr</span>
+            <span class="tag ${scoreTagClass((r.availability / Math.max(r.capacity,1))*100)}">🟢 ${r.availability} free now</span>
+            <span class="tag ${scoreTagClass((r.predicted_availability / Math.max(r.capacity,1))*100)}">🔮 ~${r.predicted_availability} predicted (${r.prediction_confidence*100|0}% confidence)</span>
+            <span>⭐ ${r.rating}</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick='openBookingModal(${JSON.stringify(r).replace(/'/g, "&apos;")})'>Book</button>
+      </div>
+    `).join("");
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="empty-state"><h3 style="text-transform:none;">Couldn't load parking</h3><p>${err.message}</p></div>`;
+  }
+}
+
+async function openBookingModal(facility) {
+  const user = getUser();
+  if (!user) { window.location.href = "login.html"; return; }
+  selectedFacility = facility;
+  document.getElementById("modalFacilityName").textContent = facility.name;
+  document.getElementById("bookingModal").classList.add("show");
+
+  const vehicleSelect = document.getElementById("vehicleSelect");
+  vehicleSelect.innerHTML = `<option>Loading…</option>`;
+  try {
+    const vehicles = await api("/vehicles");
+    if (vehicles.length === 0) {
+      vehicleSelect.innerHTML = `<option value="">No vehicles — add one in My Bookings first</option>`;
+    } else {
+      vehicleSelect.innerHTML = vehicles.map(v => `<option value="${v.id}">${v.vehicle_number} (${v.vehicle_type})</option>`).join("");
+    }
+  } catch (e) {
+    vehicleSelect.innerHTML = `<option value="">Could not load vehicles</option>`;
+  }
+}
+
+document.getElementById("cancelModalBtn").addEventListener("click", () => {
+  document.getElementById("bookingModal").classList.remove("show");
+});
+
+document.getElementById("bookingForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const vehicleId = document.getElementById("vehicleSelect").value;
+  if (!vehicleId) { toast("Please select a vehicle", true); return; }
+
+  const body = {
+    parking_id: selectedFacility.id,
+    vehicle_id: parseInt(vehicleId),
+    booking_date: document.getElementById("bookDate").value,
+    start_time: document.getElementById("bookStart").value,
+    end_time: document.getElementById("bookEnd").value,
+  };
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true; btn.textContent = "Booking…";
+  try {
+    const data = await api("/bookings", { method: "POST", body });
+    toast(`Booking confirmed! Ref: ${data.booking_ref}`);
+    document.getElementById("bookingModal").classList.remove("show");
+    setTimeout(() => window.location.href = `my-bookings.html?highlight=${data.booking_id}`, 700);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = "Confirm Booking";
+  }
+});
+
+document.getElementById("refreshBtn").addEventListener("click", loadResults);
+loadResults();
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Bookings — SmartPark India</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+
+<section class="section" style="padding-top:32px;">
+  <div class="container">
+    <div class="eyebrow" style="background:transparent;color:var(--steel);padding:0;">MY ACCOUNT</div>
+    <h2 class="section-title">My Vehicles &amp; Bookings</h2>
+
+    <div class="card">
+      <div class="flex-between">
+        <h3 style="text-transform:none;letter-spacing:0;font-size:16px;">My Vehicles</h3>
+        <button id="addVehicleBtn" class="btn btn-dark btn-sm">+ Add Vehicle</button>
+      </div>
+      <div id="vehicleForm" style="display:none;" class="mt-16">
+        <div class="flex gap-12" style="flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:160px;">
+            <label>Vehicle number</label>
+            <input type="text" id="newVehicleNumber" placeholder="UP32NR7783">
+          </div>
+          <div class="form-group" style="flex:1;min-width:140px;">
+            <label>Type</label>
+            <select id="newVehicleType">
+              <option value="4-wheeler">4-Wheeler</option>
+              <option value="2-wheeler">2-Wheeler</option>
+              <option value="ev">EV</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;min-width:140px;">
+            <label>Model (optional)</label>
+            <input type="text" id="newVehicleModel" placeholder="Hyundai Creta">
+          </div>
+        </div>
+        <button id="saveVehicleBtn" class="btn btn-primary btn-sm">Save Vehicle</button>
+      </div>
+      <div id="vehicleList" class="mt-16"></div>
+    </div>
+
+    <h3 class="mt-32" style="font-size:16px;">Bookings</h3>
+    <div id="bookingsList" class="mt-16"></div>
+  </div>
+</section>
+
+<footer><div class="container">SmartPark India — a BCA (Data Science &amp; AI) major project.</div></footer>
+
+<script src="js/api.js"></script>
+<script>
+const user = requireAuth(["customer"]);
+renderNavbar();
+
+async function loadVehicles() {
+  const list = document.getElementById("vehicleList");
+  try {
+    const vehicles = await api("/vehicles");
+    if (vehicles.length === 0) {
+      list.innerHTML = `<p class="muted" style="font-size:14px;">No vehicles added yet.</p>`;
+      return;
+    }
+    list.innerHTML = vehicles.map(v => `
+      <div class="flex-between" style="padding:8px 0;border-bottom:1px solid #eee;">
+        <span class="mono" style="font-weight:700;">${v.vehicle_number}</span>
+        <span class="muted" style="font-size:13px;">${v.vehicle_type}${v.vehicle_model ? " · " + v.vehicle_model : ""}</span>
+        <button class="btn btn-sm" style="background:transparent;color:var(--red);" onclick="deleteVehicle(${v.id})">Remove</button>
+      </div>
+    `).join("");
+  } catch (e) { list.innerHTML = `<p class="muted">Could not load vehicles.</p>`; }
+}
+
+async function deleteVehicle(id) {
+  try { await api(`/vehicles/${id}`, { method: "DELETE" }); toast("Vehicle removed"); loadVehicles(); }
+  catch (e) { toast(e.message, true); }
+}
+
+document.getElementById("addVehicleBtn").addEventListener("click", () => {
+  const form = document.getElementById("vehicleForm");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("saveVehicleBtn").addEventListener("click", async () => {
+  const body = {
+    vehicle_number: document.getElementById("newVehicleNumber").value.trim(),
+    vehicle_type: document.getElementById("newVehicleType").value,
+    vehicle_model: document.getElementById("newVehicleModel").value.trim(),
+  };
+  try {
+    await api("/vehicles", { method: "POST", body });
+    toast("Vehicle added");
+    document.getElementById("vehicleForm").style.display = "none";
+    document.getElementById("newVehicleNumber").value = "";
+    loadVehicles();
+  } catch (e) { toast(e.message, true); }
+});
+
+function statusTag(status) {
+  const map = { confirmed: "tag-green", cancelled: "tag-red", completed: "tag-yellow", expired: "tag-red" };
+  return `<span class="tag ${map[status] || "tag-yellow"}">${status}</span>`;
+}
+
+async function loadBookings() {
+  const list = document.getElementById("bookingsList");
+  const highlight = new URLSearchParams(window.location.search).get("highlight");
+  try {
+    const bookings = await api("/users/me/bookings");
+    if (bookings.length === 0) {
+      list.innerHTML = `<div class="empty-state"><h3 style="text-transform:none;">No bookings yet</h3><p>Head to <a href="index.html" style="color:var(--asphalt);font-weight:600;">Find Parking</a> to reserve your first spot.</p></div>`;
+      return;
+    }
+    list.innerHTML = bookings.map(b => `
+      <div class="card ${String(b.id) === highlight ? "" : ""}" style="${String(b.id) === highlight ? "border-color:var(--yellow);border-width:2px;" : ""}">
+        <div class="flex-between">
+          <div>
+            <span class="mono" style="font-weight:700;font-size:14px;">${b.booking_ref}</span>
+            ${statusTag(b.booking_status)}
+          </div>
+          <span style="font-weight:700;">₹${b.amount}</span>
+        </div>
+        <p style="margin-top:8px;font-size:15px;font-weight:600;">${b.parking_name}</p>
+        <p class="muted" style="font-size:13px;">${b.address}</p>
+        <div class="meta" style="display:flex;gap:14px;font-size:13px;color:var(--steel);margin-top:8px;">
+          <span>📅 ${b.booking_date}</span>
+          <span>🕐 ${b.start_time} – ${b.end_time}</span>
+          <span class="mono">🚗 ${b.vehicle_number}</span>
+        </div>
+        <div class="flex gap-8 mt-16">
+          <button class="btn btn-sm btn-dark" onclick="viewTicket(${b.id})">View Ticket</button>
+          ${b.booking_status === "confirmed" ? `<button class="btn btn-sm btn-danger" onclick="cancelBooking(${b.id})">Cancel</button>` : ""}
+        </div>
+        <div id="ticket-${b.id}" style="display:none;" class="mt-16"></div>
+      </div>
+    `).join("");
+  } catch (e) { list.innerHTML = `<p class="muted">Could not load bookings.</p>`; }
+}
+
+async function cancelBooking(id) {
+  if (!confirm("Cancel this booking?")) return;
+  try { await api(`/bookings/${id}/cancel`, { method: "POST" }); toast("Booking cancelled"); loadBookings(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function viewTicket(id) {
+  const el = document.getElementById(`ticket-${id}`);
+  if (el.style.display === "block") { el.style.display = "none"; return; }
+  try {
+    const b = await api(`/bookings/${id}`);
+    el.innerHTML = `
+      <div class="ticket">
+        <div class="ticket-header">
+          <div style="letter-spacing:0.15em;font-family:var(--font-display);font-weight:700;">SMARTPARK INDIA</div>
+          <div class="status-pill status-${b.booking_status === "confirmed" ? "confirmed" : "cancelled"} mt-8">${b.booking_status}</div>
+        </div>
+        <div class="row"><span class="label">Booking ID</span><span class="mono">${b.booking_ref}</span></div>
+        <div class="row"><span class="label">Parking</span><span>${b.parking_name}</span></div>
+        <div class="row"><span class="label">Vehicle</span><span class="plate-number">${b.vehicle_number}</span></div>
+        <div class="row"><span class="label">Date</span><span>${b.booking_date}</span></div>
+        <div class="row"><span class="label">Entry</span><span>${b.start_time}</span></div>
+        <div class="row"><span class="label">Exit</span><span>${b.end_time}</span></div>
+        <div class="qr-box">
+          <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+            <rect width="160" height="160" fill="white"/>
+            ${generateQrPattern(b.booking_ref)}
+          </svg>
+        </div>
+        <p class="center muted" style="font-size:11px;">Scan at entrance · Ref ${b.booking_ref}</p>
+      </div>`;
+    el.style.display = "block";
+  } catch (e) { toast(e.message, true); }
+}
+
+// Lightweight deterministic pattern for on-page QR preview (mirrors backend's
+// placeholder QR — see backend/services/qr_service.py for why this isn't a
+// real decodable code in the offline dev build).
+function generateQrPattern(seed) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  const size = 16, cell = 160 / size;
+  let rects = "";
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      hash = (hash * 1103515245 + 12345) >>> 0;
+      if (hash % 2 === 0) rects += `<rect x="${c*cell}" y="${r*cell}" width="${cell}" height="${cell}" fill="#1C1E22"/>`;
+    }
+  }
+  return rects;
+}
+
+renderNavbar();
+loadVehicles();
+loadBookings();
+</script>
+</body>
+</html>
